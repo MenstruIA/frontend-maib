@@ -6,12 +6,13 @@ on:
     branches: [main]
     paths:
       - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - 'frontend/.github/workflows/frontend-ci.yml'
+
   pull_request:
     branches: [main]
     paths:
       - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - 'frontend/.github/workflows/frontend-ci.yml'
 
 permissions:
   contents: read
@@ -19,10 +20,6 @@ permissions:
 jobs:
   frontend:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
       - name: Récupérer le code
@@ -35,14 +32,24 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Vérifier la version Node.js
+        run: node --version
+
+      - name: Vérifier la version npm
+        run: npm --version
+
       - name: Installer les dépendances
+        working-directory: frontend
         run: npm ci
 
       - name: Exécuter les tests frontend
+        working-directory: frontend
         run: npm test
 
       - name: Vérifier le build de production
+        working-directory: frontend
         run: npm run build
 
       - name: Audit de sécurité
+        working-directory: frontend
         run: npm audit --omit=dev --audit-level=high
