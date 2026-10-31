@@ -61,7 +61,7 @@ export function Library() {
         ))}
       </div>
       {!list.loading && !list.error && !items.length && (
-        <p className="empty-state">{query ? 'Aucun résultat fiable pour cette recherche.' : 'Aucun contenu validé n’est publié pour le moment.'}</p>
+        <p className="empty-state">{query ? 'Aucun résultat fiable pour cette recherche.' : 'Aucun contenu n’est publié pour le moment.'}</p>
       )}
     </section>
   );

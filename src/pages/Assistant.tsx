@@ -33,7 +33,7 @@ export function Assistant({ go }: { go: (to: string) => void }) {
         <img className="assistant-avatar-img" src="/images/assistant-avatar.png" alt="" width={56} height={56} />
         <div><span className="eyebrow">Assistant éducatif</span><h1 className="page-title">Quelle est votre question ?</h1></div>
       </div>
-      <div className="safety-callout"><ShieldCheck size={18} /><span>Information générale, pas un diagnostic. La réponse repose sur des contenus validés. N’écrivez pas votre nom ni d’informations qui permettent de vous identifier. MenstruAI n’enregistre pas votre question. Si la rédaction automatique est activée, le texte est transmis temporairement à un fournisseur d’IA (voir Confidentialité).</span></div>
+      <div className="safety-callout"><ShieldCheck size={18} /><span>Information générale, pas un diagnostic. La réponse repose sur des contenus issus de sources officielles (OMS, UNFPA, IPPF…). N’écrivez pas votre nom ni d’informations qui permettent de vous identifier. MenstruAI n’enregistre pas votre question. Si la rédaction automatique est activée, le texte est transmis temporairement à un fournisseur d’IA (voir Confidentialité).</span></div>
 
       <div className="chat" aria-live="polite">
         {turns.map((t, i) => (
@@ -66,8 +66,8 @@ function Answer({ a, go }: { a: AssistantAnswer; go: (to: string) => void }) {
       </div>
     );
   }
-  const label = a.mode === 'ai_grounded' ? 'Réponse générée à partir de contenus validés'
-    : a.mode === 'corpus_only' ? (a.abstained ? 'Réponse prudente' : 'Extraits de contenus validés')
+  const label = a.mode === 'ai_grounded' ? 'Réponse générée à partir de sources officielles'
+    : a.mode === 'corpus_only' ? (a.abstained ? 'Réponse prudente' : 'Extraits de sources officielles')
     : 'Assistant indisponible';
   return (
     <div className="bubble bot">

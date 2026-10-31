@@ -23,7 +23,7 @@ export function Home({ go, cycleEnabled }: { go: (to: string) => void; cycleEnab
         <div className="trust-icon"><ShieldCheck /></div>
         <div>
           <h3>Des informations qui méritent votre confiance</h3>
-          <p>Chaque fiche affiche ses sources et sa date de revue. L’assistant ne répond qu’à partir de contenus validés et ne remplace pas une consultation médicale.</p>
+          <p>Chaque fiche affiche ses sources et sa date de revue. L’assistant ne répond qu’à partir de contenus sourcés et ne remplace pas une consultation médicale.</p>
         </div>
       </div>
     </section>
