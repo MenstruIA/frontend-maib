@@ -1,0 +1,8 @@
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+Object.defineProperty(window, 'scrollTo', {
+  writable: true,
+  configurable: true,
+  value: vi.fn(),
+});
