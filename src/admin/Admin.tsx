@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { adminApi } from '../api';
 import type { AdminUser, ContentItem, HealthService, Source } from '../types';
 import { useAsync } from '../lib/useAsync';
@@ -16,12 +16,26 @@ const TABS: { id: Tab; label: string; perms: string[] }[] = [
   { id: 'audit', label: 'Audit', perms: ['audit.view'] },
 ];
 
+const KEY = 'menstruai_admin_token';
+const stored = () => { try { return sessionStorage.getItem(KEY); } catch { return null; } };
+const keep = (t: string | null) => { try { t ? sessionStorage.setItem(KEY, t) : sessionStorage.removeItem(KEY); } catch { /* stockage indisponible */ } };
+
 export function Admin() {
-  const [token, setToken] = useState<string | null>(null); // en mémoire uniquement
+  const [token, setToken] = useState<string | null>(stored);
   const [user, setUser] = useState<AdminUser | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [restoring, setRestoring] = useState(() => stored() !== null);
   const api = useMemo(() => adminApi(token), [token]);
+
+  // Au rechargement : on retrouve l'utilisateur avec le jeton conservé ; s'il est expiré, on le supprime.
+  useEffect(() => {
+    if (!token || user) { setRestoring(false); return; }
+    adminApi(token).me()
+      .then((r) => setUser(r.data))
+      .catch(() => { keep(null); setToken(null); })
+      .finally(() => setRestoring(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,10 +43,12 @@ export function Admin() {
     setBusy(true); setError('');
     try {
       const r = await adminApi(null).login(String(f.get('email')), String(f.get('password')));
-      setToken(r.data.token); setUser(r.data.user);
+      keep(r.data.token); setToken(r.data.token); setUser(r.data.user);
     } catch (err) { setError(err instanceof Error ? err.message : 'Connexion impossible.'); } finally { setBusy(false); }
   }
-  async function logout() { try { await api.logout(); } catch { /* jeton déjà invalide */ } setToken(null); setUser(null); }
+  async function logout() { try { await api.logout(); } catch { /* jeton déjà invalide */ } keep(null); setToken(null); setUser(null); }
+
+  if (restoring) return <section className="page-section narrow"><p className="muted small" role="status">Chargement…</p></section>;
 
   if (!token || !user) {
     return (
