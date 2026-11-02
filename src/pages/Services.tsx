@@ -3,6 +3,7 @@ import { MapPin, Phone, ShieldCheck } from 'lucide-react';
 import { api } from '../api';
 import { useAsync } from '../lib/useAsync';
 import { ReportButton } from '../components/FeedbackDialog';
+import { formatDateTime } from "../utils/dateFormatter";
 
 export function Services() {
   const [q, setQ] = useState('');
@@ -35,7 +36,7 @@ export function Services() {
             {s.latitude != null && s.longitude != null && (
               <a className="button secondary" target="_blank" rel="noreferrer noopener" href={`https://www.openstreetmap.org/directions?to=${s.latitude}%2C${s.longitude}`}>Voir l’itinéraire</a>
             )}
-            <span className="verified-label"><ShieldCheck size={14} /> Vérifié le {s.verified_at}</span>
+            <span className="verified-label"><ShieldCheck size={14} /> Vérifié le {formatDateTime(s.verified_at)}</span>
             <ReportButton targetType="service" targetRef={String(s.id)} label="Signaler une erreur" />
           </article>
         ))}
