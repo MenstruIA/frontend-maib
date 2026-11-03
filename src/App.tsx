@@ -66,7 +66,6 @@ export default function App() {
         {route === '/cycle' && CYCLE_ENABLED && <Cycle go={go} />}
         {route === '/confidentialite' && <Privacy />}
         {route.startsWith('/admin') && <Admin />}
-        <section className="disclaimer"><p><strong>Important :</strong> MenstruAI Bénin fournit des informations éducatives et ne remplace pas un professionnel de santé. En cas de symptômes inquiétants ou d’urgence, rendez-vous sans attendre dans un service de santé.</p></section>
       </main>
 
       <footer className="footer">

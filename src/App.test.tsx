@@ -14,12 +14,13 @@ function mockFetch(handler: (url: string, init?: RequestInit) => unknown) {
 describe('MenstruAI frontend', () => {
   beforeEach(() => { vi.restoreAllMocks(); window.location.hash = '#/'; localStorage.clear(); });
 
-  it('affiche l’accueil et l’avertissement de sécurité', async () => {
-    mockFetch(() => page());
-    render(<App />);
-    expect(screen.getByRole('heading', { name: /une information fiable/i })).toBeInTheDocument();
-    expect(screen.getByText(/ne remplace pas un professionnel de santé/i)).toBeInTheDocument();
-  });
+it('affiche correctement la page d’accueil', async () => {
+  mockFetch(() => page());
+  render(<App />);
+  expect(
+    screen.getByRole('heading', { name: /une information fiable/i })
+  ).toBeInTheDocument();
+});
 
   it('navigue vers l’assistant et affiche une réponse prudente avec signalement', async () => {
     mockFetch((url) => url.includes('/assistant/ask')
@@ -27,7 +28,7 @@ describe('MenstruAI frontend', () => {
       : page());
     render(<App />);
     fireEvent.click(screen.getAllByRole('button', { name: /discuter avec l’ia/i })[0]);
-    await waitFor(() => expect(screen.getByRole('heading', { name: /quelle est votre question/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { name: /comment puis-je vous aider/i })).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText(/votre question/i), { target: { value: 'douleurs règles' } });
     fireEvent.click(screen.getByRole('button', { name: /envoyer/i }));
     await waitFor(() => expect(screen.getByText(/ne trouve pas de contenu validé/i)).toBeInTheDocument());

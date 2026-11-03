@@ -8,9 +8,11 @@ export function Privacy() {
       <h2>Ce qui est conservé</h2>
       <p>Des statistiques techniques minimales (type de réponse et durée) sans lien avec votre identité, et vos signalements éventuels (catégorie et précision facultative).</p>
       <h2>Assistant et fournisseur d’IA</h2>
-      <p>La rédaction automatique des réponses est <strong>désactivée par défaut</strong>. Lorsqu’elle est activée, le texte de votre question est transmis, par notre serveur et de façon temporaire, à un fournisseur d’intelligence artificielle afin de rédiger la réponse à partir des contenus sourcés. MenstruAI ne l’enregistre pas ; les conditions du fournisseur (conservation, région de traitement) doivent avoir été évaluées avant l’activation. N’écrivez ni nom, ni numéro de téléphone, ni lieu précis. Si votre message évoque une situation urgente, l’orientation s’affiche sans envoi au fournisseur.</p>
+      <p>La rédaction automatique des réponses est <strong>désactivée par défaut</strong>. Lorsqu’elle est activée, le texte de votre question est transmis, par notre serveur et de façon temporaire, à un fournisseur d’intelligence artificielle afin de rédiger la réponse à partir des contenus validés. MenstruAI ne l’enregistre pas ; les conditions du fournisseur (conservation, région de traitement) doivent avoir été évaluées avant l’activation. N’écrivez ni nom, ni numéro de téléphone, ni lieu précis. Si votre message évoque une situation urgente, l’orientation s’affiche sans envoi au fournisseur.</p>
       <h2>Appareil partagé</h2>
       <p>Le bouton « Quitter » (ou la touche Échap pressée deux fois) remplace immédiatement la page par un site neutre. Il ne supprime pas l’historique du navigateur : pensez à le vider si d’autres personnes utilisent votre téléphone.</p>
+      <h2>Dictée vocale</h2>
+      <p>La dictée est facultative et ne s’active qu’après votre accord. Elle utilise la reconnaissance vocale de votre navigateur : selon le navigateur (par exemple Chrome), l’audio peut être transmis à un service tiers pour être transcrit. MenstruAI ne reçoit jamais l’audio, seulement le texte que vous choisissez d’envoyer. Si vous ne souhaitez pas utiliser ce service, écrivez votre question.</p>
       <h2>Suivi du cycle</h2>
       <p>Si vous l’utilisez, ces données sont enregistrées uniquement dans votre navigateur et peuvent être effacées depuis la page « Mon cycle ».</p>
       <h2>Limites</h2>
