@@ -152,8 +152,29 @@ function useAction() {
   return { msg, run };
 }
 
+function FormDisclosure({ title, buttonLabel, children }: { title: string; buttonLabel: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return <section className="admin-form-disclosure">
+    <div className="admin-form-disclosure-head"><h2>{title}</h2><button type="button" className="button secondary" aria-expanded={open} onClick={() => setOpen(v => !v)}>{open ? 'Fermer' : buttonLabel}</button></div>
+    {open && children}
+  </section>;
+}
+
+function Pagination({ data, onPage }: { data?: { current_page: number; last_page: number; total: number }; onPage: (page: number) => void }) {
+  if (!data || data.last_page <= 1) return null;
+  const current = data.current_page;
+  const pages = Array.from({ length: data.last_page }, (_, i) => i + 1);
+  return <nav className="admin-pagination" aria-label="Pagination">
+    <button type="button" className="button secondary" disabled={current <= 1} onClick={() => onPage(current - 1)}>Précédent</button>
+    {pages.map(page => <button type="button" key={page} className={`button ${page === current ? 'primary' : 'secondary'}`} aria-current={page === current ? 'page' : undefined} onClick={() => onPage(page)}>{page}</button>)}
+    <button type="button" className="button secondary" disabled={current >= data.last_page} onClick={() => onPage(current + 1)}>Suivant</button>
+    <span className="muted small">{data.total} éléments</span>
+  </nav>;
+}
+
 function ContentPanel({ api, can }: { api: Api; can: (p: string) => boolean }) {
-  const list = useAsync(() => api.content(), []);
+  const [page, setPage] = useState(1);
+  const list = useAsync(() => api.content(undefined, page), [page]);
   const sources = useAsync(() => api.sources().catch(() => ({ data: [] as Source[] }) as never), []);
   const cats = useAsync(() => fetch(`${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '')}/categories`).then((r) => r.json() as Promise<{ data: { id: number; name: string }[] }>), []);
   const [editing, setEditing] = useState<Partial<ContentItem> | null>(null);
@@ -210,17 +231,19 @@ function ContentPanel({ api, can }: { api: Api; can: (p: string) => boolean }) {
         </Card>
       ))}
       <Loading on={list.loading} />
+      <Pagination data={list.data ?? undefined} onPage={setPage} />
       {!list.loading && !(list.data?.data ?? []).length && <p className="empty-state">Aucun contenu.</p>}
     </>
   );
 }
 
 function SourcesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) {
-  const list = useAsync(() => api.sources(), []);
+  const [page, setPage] = useState(1);
+  const list = useAsync(() => api.sources(page), [page]);
   const { msg, run } = useAction();
   const create = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
-    await run(() => api.saveSource({ title: f.get('title'), publisher: f.get('publisher') || null, url: f.get('url'), territory: f.get('territory') || null }), () => { form.reset(); void list.reload(); });
+    await run(() => api.saveSource({ title: f.get('title'), publisher: f.get('publisher') || null, url: f.get('url'), territory: f.get('territory') || null }), () => { form.reset(); setPage(1); void list.reload(); });
   };
   const validate = async (s: Source, status: string) => {
     const rights = status === 'approuvee' ? 'autorise' : s.rights_status ?? 'a_verifier';
@@ -230,13 +253,12 @@ function SourcesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) {
   };
   return (
     <>
-      {can('source.manage') && (
+      {can('source.manage') && <FormDisclosure title="Ajouter une source" buttonLabel="Ouvrir le formulaire">
         <form className="question-form" onSubmit={create}>
-          <h2>Ajouter une source</h2>
           <input name="title" placeholder="Titre exact" required /><input name="publisher" placeholder="Organisme" /><input name="url" type="url" placeholder="https://…" required /><input name="territory" placeholder="Territoire / contexte" />
-          <button className="button primary">Ajouter (à vérifier)</button>
+          <div className="row"><button className="button primary">Ajouter (à vérifier)</button></div>
         </form>
-      )}
+      </FormDisclosure>}
       <Err msg={msg || list.error} />
       {(list.data?.data ?? []).map((s) => (
         <Card key={s.id}>
@@ -248,12 +270,14 @@ function SourcesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) {
             <button className="text-button danger" onClick={() => validate(s, 'retiree')}>Retirer</button></div>}
         </Card>
       ))}
+      <Pagination data={list.data ?? undefined} onPage={setPage} />
     </>
   );
 }
 
 function ServicesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) {
-  const list = useAsync(() => api.services(), []);
+  const [page, setPage] = useState(1);
+  const list = useAsync(() => api.services(page), [page]);
   const { msg, run } = useAction();
   const create = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
@@ -262,7 +286,7 @@ function ServicesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) 
       name: f.get('name'), service_type: f.get('service_type'), city: f.get('city'), region: f.get('region') || null,
       address: f.get('address') || null, phone: f.get('phone') || null, opening_hours: f.get('opening_hours') || null,
       latitude: num('latitude'), longitude: num('longitude'),
-    }), () => { form.reset(); void list.reload(); });
+    }), () => { form.reset(); setPage(1); void list.reload(); });
   };
   const verify = async (s: HealthService, result: 'ok' | 'failed') => {
     const method = window.prompt('Méthode de vérification (appel téléphonique, visite, source officielle…) :');
@@ -270,20 +294,18 @@ function ServicesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) 
   };
   return (
     <>
-      {can('service.manage') && (
+      {can('service.manage') && <FormDisclosure title="Ajouter une fiche (brouillon, non publique)" buttonLabel="Ouvrir le formulaire">
         <form className="question-form" onSubmit={create}>
-          <h2>Ajouter une fiche (brouillon, non publique)</h2>
           <input name="name" placeholder="Nom" required />
           <select name="service_type" required><option value="centre_de_sante">Centre de santé</option><option value="pharmacie">Pharmacie</option><option value="clinique">Clinique</option></select>
           <input name="city" placeholder="Commune" required /><input name="region" placeholder="Département" /><input name="address" placeholder="Adresse" />
           <input name="phone" placeholder="Téléphone public" /><input name="opening_hours" placeholder="Horaires" />
           <input name="latitude" type="number" step="any" placeholder="Latitude" /><input name="longitude" type="number" step="any" placeholder="Longitude" />
-          <button className="button primary">Créer la fiche</button>
+          <div className="row"><button className="button primary">Créer la fiche</button></div>
         </form>
-      )}
+      </FormDisclosure>}
       <Err msg={msg || list.error} />
       <Loading on={list.loading} />
-      {list.data && list.data.total > list.data.data.length && <p className="muted small">Affichage des {list.data.data.length} premières fiches sur {list.data.total} (tri par nom).</p>}
       {(list.data?.data ?? []).map((s) => (
         <Card key={s.id}>
           <Head title={s.name} badge={<Pill status={s.status ?? ''} text={label(SERVICE_STATUS, s.status)} />} meta={`${s.city}${s.verified_at ? ` · vérifié le ${fmt(s.verified_at)}` : ''}`} />
@@ -293,12 +315,14 @@ function ServicesPanel({ api, can }: { api: Api; can: (p: string) => boolean }) 
           </div>
         </Card>
       ))}
+      <Pagination data={list.data ?? undefined} onPage={setPage} />
     </>
   );
 }
 
 function FeedbackPanel({ api }: { api: Api }) {
-  const list = useAsync(() => api.feedback(), []);
+  const [page, setPage] = useState(1);
+  const list = useAsync(() => api.feedback(page), [page]);
   const { msg, run } = useAction();
   return (
     <>
@@ -310,6 +334,7 @@ function FeedbackPanel({ api }: { api: Api }) {
           <div className="row">{FEEDBACK_ACTIONS.map(([s, text]) => <button key={s} className="text-button" onClick={() => run(() => api.updateFeedback(f.id, s), () => void list.reload())}>{text}</button>)}</div>
         </Card>
       ))}
+      <Pagination data={list.data ?? undefined} onPage={setPage} />
       {!list.loading && !(list.data?.data ?? []).length && <p className="empty-state">Aucun signalement.</p>}
     </>
   );
@@ -331,26 +356,29 @@ function AssistantPanel({ api }: { api: Api }) {
 }
 
 function UsersPanel({ api }: { api: Api }) {
-  const list = useAsync(() => api.users(), []);
+  const [page, setPage] = useState(1);
+  const list = useAsync(() => api.users(page), [page]);
   const { msg, run } = useAction();
   const create = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
-    await run(() => api.createUser({ name: f.get('name'), email: f.get('email'), password: f.get('password'), role: f.get('role') }), () => { form.reset(); void list.reload(); });
+    await run(() => api.createUser({ name: f.get('name'), email: f.get('email'), password: f.get('password'), role: f.get('role') }), () => { form.reset(); setPage(1); void list.reload(); });
   };
   return (
     <>
+      <FormDisclosure title="Inviter un utilisateur" buttonLabel="Ouvrir le formulaire">
       <form className="question-form" onSubmit={create}>
-        <h2>Inviter un utilisateur</h2>
         <input name="name" placeholder="Nom" required /><input name="email" type="email" placeholder="E-mail" required />
         <input name="password" type="password" minLength={12} placeholder="Mot de passe provisoire (12 car. min.)" required autoComplete="new-password" />
         <select name="role">{['editor', 'medical_reviewer', 'content_admin', 'service_verifier', 'auditor', 'super_admin'].map((r) => <option key={r} value={r}>{label(ROLES, r)}</option>)}</select>
-        <button className="button primary">Créer</button>
+        <div className="row"><button className="button primary">Créer</button></div>
       </form>
+      </FormDisclosure>
       <Err msg={msg || list.error} />
-      {(list.data ?? []).map((u) => (
+      {(list.data?.data ?? []).map((u) => (
         <Card key={u.id}><Head title={u.name} badge={<Pill status={u.is_active ? 'verified' : 'withdrawn'} text={u.is_active ? 'Actif' : 'Suspendu'} />} meta={`${u.email} · ${label(ROLES, u.role)}`} />
           <button className="text-button" onClick={() => run(() => api.updateUser(u.id, { is_active: !u.is_active }), () => void list.reload())}>{u.is_active ? 'Suspendre' : 'Réactiver'}</button></Card>
       ))}
+      <Pagination data={list.data ?? undefined} onPage={setPage} />
     </>
   );
 }
@@ -442,13 +470,14 @@ function auditDetails(m?: Record<string, unknown> | null): string {
 }
 
 function AuditPanel({ api }: { api: Api }) {
-  const a = useAsync(() => api.audit(), []);
+  const [page, setPage] = useState(1);
+  const a = useAsync(() => api.audit(page), [page]);
   const rows = (a.data?.data ?? []) as AuditRow[];
   return (
     <>
       <Err msg={a.error} />
       <Loading on={a.loading} />
-      <p className="muted small">Actions sensibles les plus récentes (50 maximum). Aucun mot de passe, jeton ni question de santé n’est enregistré.</p>
+      <p className="muted small">Actions sensibles les plus récentes (50 par page). Aucun mot de passe, jeton ni question de santé n’est enregistré.</p>
       {rows.length > 0 ? (
         <div className="table-wrap">
           <table className="table">
@@ -467,6 +496,7 @@ function AuditPanel({ api }: { api: Api }) {
           </table>
         </div>
       ) : !a.loading && <p className="empty-state">Aucune action enregistrée.</p>}
+      <Pagination data={a.data ?? undefined} onPage={setPage} />
     </>
   );
 }

@@ -72,29 +72,29 @@ export const adminApi = (token: string | null) => {
       request<{ data: { token: string; user: AdminUser } }>('/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     logout: () => call<unknown>('/logout', 'POST'),
     me: () => call<{ data: AdminUser }>('/me'),
-    content: (status?: string) => call<Paginated<ContentItem>>(`/content${qs({ status })}`),
+    content: (status?: string, page = 1) => call<Paginated<ContentItem>>(`/content${qs({ status, page })}`),
     contentOne: (id: number) => call<{ data: ContentItem & { reviews?: { decision: string; notes?: string; content_version: number }[] } }>(`/content/${id}`),
     saveContent: (payload: Record<string, unknown>, id?: number) =>
       id ? call<{ data: ContentItem }>(`/content/${id}`, 'PATCH', payload) : call<{ data: ContentItem }>('/content', 'POST', payload),
     contentAction: (id: number, action: 'submit-review' | 'review' | 'publish' | 'withdraw', payload?: unknown) =>
       call<{ data: ContentItem }>(`/content/${id}/${action}`, 'POST', payload ?? {}),
-    sources: () => call<Paginated<Source>>('/sources'),
+    sources: (page = 1) => call<Paginated<Source>>(`/sources${qs({ page })}`),
     saveSource: (payload: Record<string, unknown>, id?: number) =>
       id ? call<{ data: Source }>(`/sources/${id}`, 'PATCH', payload) : call<{ data: Source }>('/sources', 'POST', payload),
     validateSource: (id: number, payload: Record<string, unknown>) => call<{ data: Source }>(`/sources/${id}/validate`, 'POST', payload),
-    services: () => call<Paginated<HealthService>>('/services'),
+    services: (page = 1) => call<Paginated<HealthService>>(`/services${qs({ page })}`),
     saveService: (payload: Record<string, unknown>, id?: number) =>
       id ? call<{ data: HealthService }>(`/services/${id}`, 'PATCH', payload) : call<{ data: HealthService }>('/services', 'POST', payload),
     verifyService: (id: number, payload: Record<string, unknown>) => call<{ data: HealthService }>(`/services/${id}/verify`, 'POST', payload),
     withdrawService: (id: number) => call<{ data: HealthService }>(`/services/${id}/withdraw`, 'POST', {}),
-    feedback: () => call<Paginated<{ id: number; public_id: string; category: string; target_type?: string; target_ref?: string; description?: string; severity: string; status: string }>>('/feedback'),
+    feedback: (page = 1) => call<Paginated<{ id: number; public_id: string; category: string; target_type?: string; target_ref?: string; description?: string; severity: string; status: string }>>(`/feedback${qs({ page })}`),
     updateFeedback: (id: number, status: string) => call<unknown>(`/feedback/${id}`, 'PATCH', { status }),
     assistant: () => call<{ data: { enabled_switch: boolean; provider_configured: boolean } }>('/assistant'),
     setAssistant: (enabled: boolean) => call<{ data: { enabled_switch: boolean; provider_configured: boolean } }>('/assistant', 'PUT', { enabled }),
-    users: () => call<AdminUser[]>('/users'),
+    users: (page = 1) => call<Paginated<AdminUser>>(`/users${qs({ page })}`),
     createUser: (payload: Record<string, unknown>) => call<unknown>('/users', 'POST', payload),
     updateUser: (id: number, payload: Record<string, unknown>) => call<unknown>(`/users/${id}`, 'PATCH', payload),
     reports: () => call<{ data: Record<string, Record<string, number> | number | { mode: string; total: number | null }[]> }>('/reports'),
-    audit: () => call<Paginated<{ id: number; action: string; entity_type: string; entity_id?: number; user_id?: number; created_at: string }>>('/audit'),
+    audit: (page = 1) => call<Paginated<{ id: number; action: string; entity_type: string; entity_id?: number; user_id?: number; created_at: string }>>(`/audit${qs({ page })}`),
   };
 };

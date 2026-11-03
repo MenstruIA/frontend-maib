@@ -337,3 +337,72 @@ fieldset { border: 1px solid var(--line); border-radius: 12px; }
 .chat-empty .safety-callout { margin: 8px 0 0; background: #f0f6ff; color: #2b4d79; border: 1px solid #d9e8ff; text-align: left; font-size: 12.5px; line-height: 1.6; }
 .bubble .answer-status { width: fit-content; padding: 6px 12px; border-radius: 999px; background: #edf8f2; color: #176b49; font-size: 12px; font-weight: 800; }
 .bubble .answer-status.urgent-status { background: #ffe3ec; color: var(--pink); }
+
+/* ================================FORMULAIRES REPLIABLES================================ */
+.admin-form-disclosure { margin: 12px 0 18px;}
+
+.admin-form-disclosure-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-form-disclosure-head h2 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.admin-form-disclosure > .question-form {
+  margin-top: 12px;
+}
+
+/* Pagination */
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.admin-pagination .button {
+  min-width: 38px;
+}
+
+.admin-pagination .button.active {
+  background: var(--pink-light);
+  color: var(--pink);
+  border: 1px solid var(--pink);
+  box-shadow: none;
+}
+
+.admin-pagination .button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .admin-form-disclosure-head {
+    align-items: flex-start;
+  }
+
+  .admin-form-disclosure-head .button {
+    width: 100%;
+  }
+
+  .admin-pagination {
+    gap: 6px;
+  }
+
+  .admin-pagination .button {
+    padding: 10px 13px;
+    min-width: 34px;
+  }
+}
