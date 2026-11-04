@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAsync } from '../lib/useAsync';
 import { ReportButton } from '../components/FeedbackDialog';
 import { formatDateTime } from "../utils/dateFormatter";
+import { ServicesMap } from '../components/ServicesMap';
 
 export function Services() {
   const [q, setQ] = useState('');
@@ -25,6 +26,7 @@ export function Services() {
         <button className="button primary" type="submit">Rechercher</button>
       </form>
       {res.error && <div className="notice error" role="alert">Le répertoire n’est pas disponible pour le moment.</div>}
+      {!res.loading && !res.error && <ServicesMap services={items} />}
       <div className="service-grid">
         {items.map((s) => (
           <article className="service-card" key={s.id}>
