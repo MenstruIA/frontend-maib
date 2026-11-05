@@ -1,8 +1,7 @@
 /* Service worker MenstruAI : lecture hors ligne du contenu public uniquement.
    Jamais mis en cache : assistant, signalements, administration (données sensibles ou authentifiées).
-   v2 : les pages (navigation) sont servies « réseau d'abord » pour que les mises à jour de l'application
-   arrivent sans attendre ; le cache ne sert que de secours hors ligne. */
-const VERSION = 'menstruai-v2';
+*/   
+const VERSION = 'menstruai-v3';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/logo.png'];
 const CACHEABLE_API = /\/api\/v1\/(content|categories|services)(\/|\?|$)/;
 
@@ -17,7 +16,8 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.pathname.includes('/admin') || /assistant|feedback/.test(url.pathname)) return; // réseau direct, pas de cache
+  if (url.pathname.includes('/admin') || /assistant|feedback|\/places\//.test(url.pathname)) return; // réseau direct, pas de cache
+  if (url.searchParams.has('lat') || url.searchParams.has('lng')) return; // une position ne doit jamais être stockée
 
   // API publique : réseau d'abord, copie locale en secours hors ligne.
   if (CACHEABLE_API.test(url.pathname + url.search)) {

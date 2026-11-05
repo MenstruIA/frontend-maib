@@ -80,7 +80,7 @@ it('affiche correctement la page d’accueil', async () => {
     mockFetch(() => page());
     render(<App />);
     window.location.hash = '#/centres';
-    await waitFor(() => expect(screen.getByText(/aucun service vérifié/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/aucune fiche vérifiée/i)).toBeInTheDocument());
   });
 
   it('l’administration exige une connexion', async () => {
@@ -102,5 +102,20 @@ it('affiche correctement la page d’accueil', async () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /assistant et fournisseur d’ia/i })).toBeInTheDocument());
     expect(screen.getByText(/désactivée par défaut/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /appareil partagé/i })).toBeInTheDocument();
+  });
+});
+
+describe('annuaire des services', () => {
+  it('affiche type, statut vérifié, zone sanitaire et date sans inventer de commune', async () => {
+    mockFetch(() => page([{
+      id: 1, name: 'CS Banikoara', service_type: 'centre_de_sante', city: null, region: 'Alibori',
+      health_zone: 'Banikoara', ownership: 'public', verified_at: '2026-11-02',
+    }]));
+    render(<App />);
+    window.location.hash = '#/centres';
+    await waitFor(() => expect(screen.getByText('CS Banikoara')).toBeInTheDocument());
+    expect(screen.getAllByText(/Centre de santé/)[0]).toBeInTheDocument();
+    expect(screen.getByText(/Vérifié le 2026-11-02/)).toBeInTheDocument();
+    expect(screen.getByText(/Position non renseignée/)).toBeInTheDocument();
   });
 });

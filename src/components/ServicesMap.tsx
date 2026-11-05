@@ -1,145 +1,110 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
-import type { HealthService } from '../types';
-import { LocateFixed } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import './ServicesMap.css';
+import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { BENIN_BOUNDS, BENIN_CENTER, type LatLng } from '../lib/geo';
+import { hasPosition, type MapPlace, type PlaceKind } from '../lib/placesModel';
+import { PlaceDetails } from './PlaceDetails';
 
-type GeoPoint = { latitude: number; longitude: number };
+const TILE_URL = import.meta.env.VITE_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const LETTER: Record<PlaceKind, string> = { pharmacy: 'P', clinic: 'C', hospital: 'H', centre: 'S', other: '+' };
 
-const serviceIcon = L.divIcon({
-  className: 'menstruai-map-marker-wrap',
-  html: '<span class="menstruai-map-marker"><span></span></span>',
-  iconSize: [28, 36],
-  iconAnchor: [14, 34],
-  popupAnchor: [0, -30],
-});
-const userIcon = L.divIcon({
-  className: 'menstruai-user-marker-wrap',
-  html: '<span class="menstruai-user-marker" aria-label="Votre position"></span>',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-});
+/** Marqueurs dessinés en CSS : aucune image à charger, couleur selon la fiabilité (rose = vérifié, gris = non vérifié). */
+function pin(place: MapPlace, selected: boolean): L.DivIcon {
+  return L.divIcon({
+    className: 'map-pin-wrap',
+    html: `<span class="map-pin ${place.verified ? 'verified' : 'unverified'}${selected ? ' selected' : ''}"><b>${LETTER[place.kind]}</b></span>`,
+    iconSize: [34, 42], iconAnchor: [17, 40], popupAnchor: [0, -34],
+  });
+}
 
-function FitMarkers({ services }: { services: HealthService[] }) {
+const youIcon = L.divIcon({ className: 'map-pin-wrap', html: '<span class="map-you"></span>', iconSize: [18, 18], iconAnchor: [9, 9] });
+
+/** Déplace la carte seulement si elle est visible et a une taille : masquée (onglet « Liste » sur mobile), sa taille est nulle et Leaflet calcule des coordonnées NaN. */
+function safeFly(map: L.Map, lat: number, lng: number, zoom: number, duration: number) {
+  const size = map.getSize();
+  if (size.x === 0 || size.y === 0 || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  map.flyTo([lat, lng], zoom, { duration });
+  return true;
+}
+
+function Controller({ center, selected, userPos, visible, markers }: {
+  center: LatLng | null; selected: MapPlace | null; userPos: LatLng | null; visible: boolean; markers: React.MutableRefObject<Record<string, L.Marker>>;
+}) {
   const map = useMap();
-  const points = useMemo(
-    () => services.filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude)),
-    [services],
-  );
+  // Dernière destination demandée pendant que la carte était masquée : on la rejoue dès qu'elle devient visible.
+  const pending = useRef<(() => void) | null>(null);
+
+  // La carte doit recalculer sa taille quand son onglet devient visible ou que la fenêtre change.
+  useEffect(() => {
+    const container = map.getContainer();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => map.invalidateSize()) : null;
+    observer?.observe(container);
+    return () => observer?.disconnect();
+  }, [map]);
 
   useEffect(() => {
-    if (points.length === 1) {
-      map.setView([points[0].latitude as number, points[0].longitude as number], 14);
-    } else if (points.length > 1) {
-      const bounds = L.latLngBounds(points.map((s) => [s.latitude as number, s.longitude as number]));
-      map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-    }
-  }, [map, points]);
+    if (!visible) return;
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+      pending.current?.();
+      pending.current = null;
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [visible, map]);
+
+  useEffect(() => {
+    if (!center) return;
+    const go = () => safeFly(map, center.lat, center.lng, 14, 0.8);
+    if (!go()) pending.current = go;
+  }, [center, map]);
+
+  useEffect(() => {
+    if (!userPos || center) return;
+    const go = () => safeFly(map, userPos.lat, userPos.lng, 14, 0.8);
+    if (!go()) pending.current = go;
+  }, [userPos, center, map]);
+
+  useEffect(() => {
+    if (!selected || !hasPosition(selected)) return;
+    const go = () => {
+      const moved = safeFly(map, selected.lat, selected.lng, Math.max(map.getZoom(), 15), 0.6);
+      if (moved) setTimeout(() => markers.current[selected.id]?.openPopup(), 650);
+      return moved;
+    };
+    if (!go()) pending.current = go;
+  }, [selected, map, markers]);
   return null;
 }
 
-function LocateUser({ onLocated }: { onLocated: (point: GeoPoint) => void }) {
-  const map = useMap();
-  const locate = () => {
-    if (!navigator.geolocation) {
-      window.alert('La géolocalisation n’est pas prise en charge par ce navigateur.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const point = { latitude: coords.latitude, longitude: coords.longitude };
-        map.flyTo([point.latitude, point.longitude], 15, { duration: 1 });
-        onLocated(point);
-      },
-      () => window.alert('Position indisponible. Vérifiez que vous avez autorisé la géolocalisation.'),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
-  };
-  return (
-    <button className="services-map-locate" type="button" onClick={locate} aria-label="Me localiser">
-      <LocateFixed size={17} /> <span>Me localiser</span>
-    </button>
-  );
-}
-
-function getLabel(type: string) {
-  if (type === 'pharmacie') return 'Pharmacie';
-  if (type === 'clinique') return 'Clinique';
-  return 'Centre de santé';
-}
-
-function directionsUrl(destination: GeoPoint, origin?: GeoPoint) {
-  const params = new URLSearchParams({
-    api: '1',
-    destination: `${destination.latitude},${destination.longitude}`,
-    travelmode: 'driving',
-  });
-  if (origin) params.set('origin', `${origin.latitude},${origin.longitude}`);
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
-}
-
-export function ServicesMap({ services }: { services: HealthService[] }) {
-  const [userPosition, setUserPosition] = useState<GeoPoint | null>(null);
-  const located = services.filter(
-    (s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude),
-  );
+export default function ServicesMap({ places, selectedId, onSelect, center, userPos, visible }: {
+  places: MapPlace[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  center: LatLng | null;
+  userPos: LatLng | null;
+  visible: boolean;
+}) {
+  const markers = useRef<Record<string, L.Marker>>({});
+  const located = useMemo(() => places.filter(hasPosition), [places]);
+  const selected = places.find((p) => p.id === selectedId) ?? null;
 
   return (
-    <section className="services-map-section" aria-label="Carte des services de santé">
-      <div className="services-map-heading">
-        <div>
-          <h2>Carte des services de santé</h2>
-          <p>Localisez les établissements répertoriés et vérifiés.</p>
-        </div>
-        <div className="services-map-actions">
-          <span className="services-map-count">{located.length} établissement{located.length > 1 ? 's' : ''} sur la carte</span>
-        </div>
-      </div>
-      <div className="services-map-frame">
-        <MapContainer
-          center={[9.5, 2.3]}
-          zoom={7}
-          scrollWheelZoom
-          className="services-leaflet-map"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <FitMarkers services={located} />
-          <LocateUser onLocated={setUserPosition} />
-          {userPosition && <Marker position={[userPosition.latitude, userPosition.longitude]} icon={userIcon}><Popup>Votre position (visible uniquement dans cette session).</Popup></Marker>}
-          {located.map((s) => {
-            const destination = { latitude: s.latitude as number, longitude: s.longitude as number };
-            return (
-              <Marker key={s.id} position={[destination.latitude, destination.longitude]} icon={serviceIcon}>
-                <Popup>
-                  <div className="services-map-popup">
-                    <strong>{s.name}</strong>
-                    <span>{getLabel(s.service_type)}</span>
-                    <p>{[s.address, s.city, s.region].filter(Boolean).join(', ')}</p>
-                    {s.phone && <a href={`tel:${s.phone.replace(/[^\d+]/g, '')}`}>{s.phone}</a>}
-                    <a target="_blank" rel="noreferrer noopener" href={directionsUrl(destination, userPosition ?? undefined)}>
-                      Obtenir l’itinéraire
-                    </a>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MapContainer>
-      </div>
-      {located.length === 0 && (
-        <div className="services-map-empty">
-          <p>Aucun établissement de cette recherche ne possède actuellement de coordonnées GPS.</p>
-          <p>Les fiches restent accessibles dans la liste ci-dessous.</p>
-        </div>
-      )}
-      <p className="services-map-attribution">
-        Carte © OpenStreetMap. Les fiches affichées proviennent du répertoire MenstruAI-Bénin.
-      </p>
-    </section>
+    <MapContainer center={[BENIN_CENTER.lat, BENIN_CENTER.lng]} zoom={7} minZoom={6} maxBounds={BENIN_BOUNDS} maxBoundsViscosity={0.8}
+      className="places-map" scrollWheelZoom aria-label="Carte interactive des établissements de santé au Bénin">
+      <TileLayer url={TILE_URL} attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer noopener">contributeurs OpenStreetMap</a>' maxZoom={19} />
+      <Controller center={center} selected={selected} userPos={userPos} visible={visible} markers={markers} />
+      {userPos && <>
+        <Circle center={[userPos.lat, userPos.lng]} radius={120} pathOptions={{ color: '#2b6cb0', weight: 1, fillOpacity: 0.12 }} />
+        <Marker position={[userPos.lat, userPos.lng]} icon={youIcon} interactive={false} />
+      </>}
+      {located.map((p) => (
+        <Marker key={p.id} position={[p.lat, p.lng]} icon={pin(p, p.id === selectedId)} zIndexOffset={p.verified ? 500 : 0}
+          ref={(m) => { if (m) markers.current[p.id] = m; else delete markers.current[p.id]; }}
+          eventHandlers={{ click: () => onSelect(p.id) }}>
+          <Popup minWidth={230} maxWidth={290}><PlaceDetails place={p} userPos={userPos} compact /></Popup>
+        </Marker>
+      ))}
+    </MapContainer>
   );
 }
